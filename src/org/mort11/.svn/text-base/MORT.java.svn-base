@@ -1,0 +1,241 @@
+/*----------------------------------------------------------------------------*/
+/* Copyright (c) FIRST 2008. All Rights Reserved.                             */
+/* Open Source Software - may be modified and shared by FRC teams. The code   */
+/* must be accompanied by the FIRST BSD license file in the root directory of */
+/* the project.                                                               */
+/*----------------------------------------------------------------------------*/
+package org.mort11;
+
+
+import edu.wpi.first.wpilibj.AnalogChannel;
+import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.DigitalModule;
+import edu.wpi.first.wpilibj.I2C;
+import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.SimpleRobot;
+import edu.wpi.first.wpilibj.can.CANTimeoutException;
+
+import org.mort11.dt.VBusDriveTrain;
+
+import org.mort11.ee.Arm;
+import org.mort11.ee.Claw;
+import org.mort11.ee.Wrist;
+
+/**
+ * The VM is configured to automatically run this class, and to call the
+ * functions corresponding to each mode, as described in the SimpleRobot
+ * documentation. If you change the name of this class or the package after
+ * creating this project, you must also update the manifest file in the resource
+ * directory.
+ */
+public class MORT extends SimpleRobot {
+
+    /* END EFFECTOR */
+    Arm arm;
+    Wrist wrist;
+    Claw claw;
+    Joystick eeJoy1;
+    Joystick eeJoy2;
+
+    /* DRIVETRAIN */
+    VBusDriveTrain dt;
+    Joystick leftJoyDT;
+    Joystick rightJoyDT;
+
+    I2C blinkm;
+    AnalogChannel rangeFinder;
+
+    /* GENERAL */
+    Compressor comp;
+
+    public void robotInit() {
+
+        /* END EFFECTOR */
+        arm = new Arm();
+        wrist = new Wrist();
+        claw = new Claw(2,3);
+        eeJoy1 = new Joystick(3);
+        eeJoy2 = new Joystick(4);
+
+        /* DRIVE TRAIN */
+        dt = new VBusDriveTrain(1);
+        comp = new Compressor(1,1);
+        leftJoyDT = new Joystick(1);
+        rightJoyDT = new Joystick(2);
+
+        blinkm = new I2C(DigitalModule.getInstance(4), 0x09);
+        byte[] rgb = new byte[3];
+        blinkm.transaction(new byte[] {'g'}, 1, rgb, 3);
+        System.out.println("rgb " + rgb[0]);
+        System.out.println(blinkm.transaction(new byte[] {'n', -1, -1, -1}, 4, null, 0));
+        blinkm.transaction(new byte[] {'g'}, 1, rgb, 3);
+        System.out.println("rgb " + rgb[0]);
+        rangeFinder = new AnalogChannel(1);
+    }
+    /**
+     * This function is called once each time the robot enters autonomous mode.
+     */
+    public void autonomous() {
+        comp.start();
+        dt.shift(true); //shift to low gear
+        arm.stop();
+        dt.reset();
+        boolean forward = true;
+        while(isAutonomous()) {
+            System.out.println(rangeFinder.getVoltage());
+            if(rangeFinder.getVoltage() < 0.5) {
+                dt.basicDrive(0, 0);
+            } else {
+//                arm.setPos(arm.HIGH);
+//                wrist.setPos(0.38);
+                  dt.followLine(forward);
+//                if(dt.offLine()) {
+//                    forward = false;
+//                    dt.basicDrive(-0.3, -0.3);
+//                    claw.moveRollersBackward();
+//                } else {
+//                    dt.followLine(forward);
+//                    claw.stopRollers();
+//                }
+            }
+            
+            //check to see the distance from the wall - if within certain distance place tube (sounds easy right? :P)
+//            if(!dt.atTriangle()) {
+//                    dt.followLine();
+//            } else {
+//                    dt.pastTriangle(true);
+//            }
+            //Add cases for left, right, outside (check the dial)
+            
+        }
+    }
+
+    
+
+    /**
+     * This function is called once each time the robot enters operator control.
+     */
+    public void operatorControl() {
+
+        
+        comp.start();
+
+        /* DRIVE TRAIN */
+        boolean wasHeld = false;
+
+        /* END EFFECTOR */
+        boolean triggerWasHeld = false;
+
+        /* PRESETS */
+        boolean runningPreset = false; //General for stopping joystick input
+        boolean runningWristPreset = false; //General for stopping joystick input
+        double preset = arm.MID;
+        double wristPreset = 0.42;
+
+        /* JOYSTICK VALUES */
+        double ee1y, ee2y, leftDTY, rightDTY;
+
+        while(isOperatorControl()) {
+            System.out.println(arm.getPos() + " || " + wrist.getPos() + " " + runningWristPreset);
+            System.out.println(rangeFinder.getVoltage());
+            /* DRIVE TRAIN */
+            if((leftJoyDT.getTrigger() || rightJoyDT.getTrigger()) && !wasHeld) {
+                dt.shift();
+                wasHeld = true;
+            } else if(!leftJoyDT.getTrigger() && !rightJoyDT.getTrigger() && wasHeld) {
+                wasHeld = false;
+            }
+
+            leftDTY = -leftJoyDT.getY();
+            rightDTY = -rightJoyDT.getY();
+            dt.basicDrive(leftDTY, rightDTY); //these values may or may not need to be flipped
+
+            /* END EFFECTOR */
+            ee1y = eeJoy1.getY();
+            ee2y = eeJoy2.getY();
+            for (int i = 6;i <= 12;i++) { //Pat is awesome
+                if (eeJoy2.getRawButton(i)) {
+                    runningPreset = true;
+                    arm.runningPreset = true;
+                    runningWristPreset = true;
+                    wrist.runningPreset = true;
+                    if (i == 6)
+                        preset = arm.TROLL;
+                    else if (i == 7 || i == 8)
+                        preset = arm.HIGH;
+                    else if (i == 9 || i == 10)
+                        preset = arm.MID;
+                    else if (i == 11 || i == 12)
+                        preset = arm.LOW;
+                    if (i == 8 || i == 10 || i == 12)
+                        preset += 0.02;
+
+                    wristPreset = 0.38;
+                }
+            }
+            if (eeJoy1.getRawButton(4)) {
+                preset = arm.HOME;
+                //TODO find wrist postition of arm.HOME
+                runningPreset = true;
+                runningWristPreset = true;
+            }
+            
+            if (runningPreset) {
+                arm.setPos(preset);
+                if (!arm.runningPreset) {
+                    runningPreset = false;
+                }
+            } else {
+                arm.setSpeed(ee2y);
+            }
+
+            if (runningWristPreset) {
+                wrist.setPos(wristPreset);
+                if (!wrist.runningPreset) {
+                    runningWristPreset = false;
+                }
+            } else {
+                wrist.manualMove(-ee1y);
+            }
+
+            /* ROLLERS */
+            if(eeJoy1.getRawButton(3)) {
+                claw.moveRollersForward(); //rollers suck
+            } else if(eeJoy1.getRawButton(5)) {
+                claw.moveRollersBackward(); //rollers release
+            } else {
+                claw.stopRollers();
+            }
+
+            /* OPEN/CLOSE CLAW */
+            if(eeJoy1.getTrigger() && !triggerWasHeld) {
+                if(!(claw.isOpen())) {
+                    claw.open();
+                } else {
+                    claw.close();
+                }
+                triggerWasHeld = true;
+            } else if(!eeJoy1.getTrigger() && triggerWasHeld) {
+                triggerWasHeld = false;
+            }
+
+
+            /* MANUAL WRIST OVERRIDE */
+//            if(eeJoy1.getRawButton(10) && eeJoy1.getTrigger()) { //middle middle
+//                wrist.manualMove(ee1y);
+//                arm.manualMove(0.0);
+//            }
+//
+//            /* MANUAL ARM OVERRIDE */
+//            if(eeJoy1.getRawButton(10) && !eeJoy1.getTrigger()) { //middle middle
+//                arm.manualMove(ee1y);
+//                wrist.manualMove(0.0);
+//            }
+
+            if (eeJoy2.getRawButton(4)) {
+                arm.stop();
+                wrist.stop();
+            }
+        }
+    }
+}

@@ -1,0 +1,178 @@
+package org.mort11.dt;
+
+import org.mort11.util.JaguarDealer;
+
+import edu.wpi.first.wpilibj.CANJaguar;
+import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.can.CANTimeoutException;
+
+/**
+*
+* @author MORT
+*/
+public class VBusDriveTrain {
+
+   private CANJaguar frontLeft, frontRight, backLeft, backRight;
+   private ShifterSolenoid shifter;
+   //private Encoder encoderLeft, encoderRight; //These are used if the optical encoders are connected to the Analog ports conencted to the cRIO
+   private DigitalInput left = new DigitalInput(14);
+   private DigitalInput right = new DigitalInput(3);
+   private DigitalInput center = new DigitalInput(4);
+
+   private boolean atTriangle = false;
+   private boolean offLine = false;
+
+   public VBusDriveTrain(int solenoidPort) {
+       frontLeft = JaguarDealer.getJag(8);
+       frontRight = JaguarDealer.getJag(3);
+       backLeft = JaguarDealer.getJag(7);
+       backRight = JaguarDealer.getJag(4);
+       shifter = new ShifterSolenoid(solenoidPort);
+   }
+
+   public CANJaguar[] getSpeedControllers() {
+       return new CANJaguar[] {frontLeft, frontRight, backLeft, backRight};
+   }
+   
+   /**
+   * Very basic drive method. Just feeds the values to the speed controllers.
+   * @param leftSpeed The percent voltage to send to the left side Jaguars.
+   * @param rightSpeed The percent voltage to send to the right side Jaguars.
+   */
+   public void basicDrive(double leftSpeed, double rightSpeed) {
+        try {
+                frontLeft.setX(leftSpeed);
+                backLeft.setX(leftSpeed);
+                frontRight.setX(-rightSpeed);
+                backRight.setX(-rightSpeed);
+        } catch(CANTimeoutException ex){
+                ex.printStackTrace();
+        }
+   }
+
+    /**
+    * Driving mode for percentVBus.
+    *
+    * @param leftSpeed The percent voltage for the left side
+    * @param rightSpeed The percent voltage for the right side
+	* @param squareValues True, the leftSpeed and rightSpeed values are squared. Otherwise, the raw values are fed.
+    */
+   public void drive(double leftSpeed, double rightSpeed, boolean squareValues) {
+        if(squareValues) {
+            //square speeds and check for negatives
+            leftSpeed *= leftSpeed * ((leftSpeed < 0) ? -1 : 1);
+            rightSpeed *= rightSpeed  * ((rightSpeed < 0) ? -1 : 1);
+        }
+        try {
+                frontLeft.setX(leftSpeed);
+                backLeft.setX(leftSpeed);
+                frontRight.setX(rightSpeed);
+                backRight.setX(rightSpeed);
+        } catch(CANTimeoutException ex){
+                ex.printStackTrace();
+        }
+   }
+
+   /**
+   * Shifts from low to high, or high to low.
+   */
+   public void shift() {
+       shifter.shift();
+   }
+
+   /**
+    * Shifts to a specific gear.
+    * @param highGear True shifts to high gear, false shifts to low gear.
+    */
+   public void shift(boolean highGear) {
+       shifter.shift(!highGear);
+   }
+   
+   /**
+   * Gets the state of the transmission.
+   * @return True if in high gear, false if in low gear.
+   */
+   public boolean inHighGear() {
+        return shifter.getHigh();
+   }
+
+   //Really need to implement wheel speed matching
+
+   /**
+   * Gets whether or not the drivetrain thinks it is at the triangle (during Autonomous).
+   * @return True if it detects it is at the triangle (all three sensors detect a line), otherwise false.
+   */
+   public boolean atTriangle() {
+       return atTriangle;
+   }
+   
+   /**
+   * Allows autonomous mode to change the boolean without me having to change this code.
+   * @param b True if past the triangle, false if not. Follow this or it will break.
+   */
+   public void pastTriangle(boolean b) {
+		atTriangle = b;
+   }
+
+   public boolean offLine() {
+       return offLine;
+   }
+
+   public void reset() {
+       offLine = false;
+   }
+
+   //Not entirely sure what the hell this will do
+   /**
+    * Follow line.
+    * @param forward If true, robot follows line forward; false, it follows it backward.
+    */
+   public void followLine(boolean forward) {
+       double lowSpeed = 0.1;
+       double highSpeed = 0.3;
+       double leftSpeed = 0;
+       double rightSpeed = 0;
+
+       boolean leftDetected = !left.get();
+       boolean rightDetected = !right.get();
+       boolean centerDetected = !center.get();
+       System.out.println("Left: " + leftDetected + " Right: " + rightDetected + " Center: " + centerDetected);
+       //Case 1: Only the center is on the line
+       if(!leftDetected && !rightDetected && centerDetected) {
+           leftSpeed = highSpeed;
+           rightSpeed = highSpeed;
+           System.out.println("Going forward...");
+       }
+       //Case 2: Center and left detected OR just left
+       if((leftDetected && !rightDetected)) {
+           leftSpeed = lowSpeed;
+           rightSpeed = highSpeed;
+           System.out.println("Drifting right...");
+       }
+       //Case 3: Center and right detected OR just right
+       if(!leftDetected && rightDetected) {
+           leftSpeed = highSpeed;
+           rightSpeed = lowSpeed;
+           System.out.println("Drifting left...");
+       }
+       //Case 4: Hey we found the triangle
+       if(leftDetected && rightDetected && centerDetected) {
+           atTriangle = true;
+           System.out.println("At triangle.");
+       }
+       //Case 5: None are seeing the line
+       if(!leftDetected && !rightDetected && !centerDetected) {
+           leftSpeed = 0.0;
+           rightSpeed = 0.0;
+           offLine = true;
+           System.out.println("IDK. I'm stopping.");
+       }
+
+       if(forward) {
+           basicDrive(leftSpeed, rightSpeed);
+       } else {
+           basicDrive(-leftSpeed, -rightSpeed);
+       }
+   }
+   
+}

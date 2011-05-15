@@ -1,0 +1,6 @@
+This is a snapshot of MORT (FRC team 11)'s code for or 2011 robot, MORTasaurus.
+It's rather iterative, but has a few interesting things, such as the arm and wrist control loops and preset modes.
+
+Dependencies
+***************
+WPIlib >=1.0.6.0
