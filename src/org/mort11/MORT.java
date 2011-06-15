@@ -88,68 +88,69 @@ public class MORT extends SimpleRobot {
     boolean backedUp = false;
     boolean yTurn = true;
 
-//    public void autonomous() {
-//        while(isAutonomous()) {
-//            System.out.println(dial[0].get() + " || " + dial[1].get() + " || " + dial[2].get() + " || " + dial[3].get());
-//            if(!dial[0].get() || !dial[3].get())
-//                System.out.println("Straight");
-//            else if(!dial[2].get())
-//                System.out.println("Left");
-//            else if(!dial[1].get())
-//                System.out.println("Right");
-//        }
-//    }
+
     public void autonomous() {
-//        /*double range;
-//        comp.start();
-//        dt.shift(Constants.DriveTrain.LOW_GEAR);
-//        arm.runningPreset = true;
-//        wrist.runningPreset = true;
-//
-//        while(isAutonomous() && isEnabled()) {
-//            range = rangeFinder.getVoltage();
-//
-//            if(!wontonComplete) {
-//                if(arm.runningPreset)
-//                    arm.setPos(Constants.Arm.OUTER_HIGH);
-//                if(wrist.runningPreset)
-//                    wrist.setPos(Constants.Wrist.OUTER_HIGH, Constants.Wrist.AUTON_SPEED);
-//            } else if (backedUp) {
-//                if(arm.runningPreset)
-//                    arm.setPos(Constants.Arm.HOME);
-//                if(wrist.runningPreset)
-//                    wrist.setPos(Constants.Wrist.HOME, Constants.Wrist.AUTON_SPEED);
-//            }
-//
-//            if(!dial[0].get() || !dial[3].get()) { //STRAIGHT RUTABAGA
-//                //System.out.println("straight " + rangeFinder.getVoltage());
-//                if(!wontonComplete) {
-//                    if(followingLine) {
-//                        dt.followLine(true);
-//                        if (range < Constants.Auto.STRAIGHT_DIST) {
-//                            followingLine = false;
-//                        }
-//                    } else {
-//                        dt.stop();
-////                        System.out.println("stop " + arm.runningPreset + " :: " + wrist.runningPreset);
-//                        if(!arm.runningPreset && !wrist.runningPreset) {
-////                            System.out.println("roller");
-//                            claw.moveRollersBackward();
-//                            Timer.delay(0.6);
-//                            claw.stopRollers();
-//                            wontonComplete = true;
-//                        }
-//                    }
-//                } else if (!backedUp) {
-//                    dt.basicDrive(-0.5, -0.5);
-//                    Timer.delay(2.0);
-//                    dt.stop();
-//                    backedUp = true;
-//                    arm.runningPreset = true;
-//                    wrist.runningPreset = true;
-//                }
-//            }
-//
+        
+        double range;
+        comp.start();
+        dt.shift(Constants.DriveTrain.LOW_GEAR);
+        arm.runningPreset = true;
+        wrist.runningPreset = true;
+
+        while(isAutonomous() && isEnabled()) {
+            /* Used for testing the dial, uncomment block below */
+                /*
+                    System.out.println(dial[0].get() + " || " + dial[1].get() + " || " + dial[2].get() + " || " + dial[3].get());
+                    if(!dial[0].get() || !dial[3].get())
+                        System.out.println("Straight");
+                    else if(!dial[2].get())
+                        System.out.println("Left");
+                    else if(!dial[1].get())
+                        System.out.println("Right");
+                */
+            range = rangeFinder.getVoltage();
+
+            if(!wontonComplete) {
+                if(arm.runningPreset)
+                    arm.setPos(Constants.Arm.OUTER_HIGH);
+                if(wrist.runningPreset)
+                    wrist.setPos(Constants.Wrist.OUTER_HIGH, Constants.Wrist.AUTON_SPEED);
+            } else if (backedUp) {
+                if(arm.runningPreset)
+                    arm.setPos(Constants.Arm.HOME);
+                if(wrist.runningPreset)
+                    wrist.setPos(Constants.Wrist.HOME, Constants.Wrist.AUTON_SPEED);
+            }
+
+            if(!dial[0].get() || !dial[3].get()) { //STRAIGHT RUTABAGA
+                //System.out.println("straight " + rangeFinder.getVoltage());
+                if(!wontonComplete) {
+                    if(followingLine) {
+                        dt.followLine(true);
+                        if (range < Constants.Auto.STRAIGHT_DIST) {
+                            followingLine = false;
+                        }
+                    } else {
+                        dt.stop();
+                        //System.out.println("stop " + arm.runningPreset + " :: " + wrist.runningPreset);
+                        if(!arm.runningPreset && !wrist.runningPreset) {
+                            claw.moveRollersBackward();
+                            Timer.delay(0.6);
+                            claw.stopRollers();
+                            wontonComplete = true;
+                        }
+                    }
+                } else if (!backedUp) {
+                    dt.basicDrive(-0.5, -0.5);
+                    Timer.delay(2.0);
+                    dt.stop();
+                    backedUp = true;
+                    arm.runningPreset = true;
+                    wrist.runningPreset = true;
+                }
+            }
+            
+            /* Not competition ready; Needs more work */
 //            else if(!dial[2].get()) { //LEFT RUTABAGA
 ////                System.out.println("left tri RF: " + range);
 //                /*if (followingLine) {
@@ -247,13 +248,14 @@ public class MORT extends SimpleRobot {
 //                detectedLine = rangeFinder.getVoltage() > Constants.Auto.RIGHT_DIST;
 //            }
 //        }
-//        //reset autonomous
-//        followingLine = true;
-//        turning = false;
-//        detectedLine = false;
-//        wontonComplete = false;
-//        backedUp = false;
-//        yTurn = true;
+
+        //reset autonomous
+        followingLine = true;
+        turning = false;
+        detectedLine = false;
+        wontonComplete = false;
+        backedUp = false;
+        yTurn = true;
     }
 
 
